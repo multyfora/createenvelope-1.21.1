@@ -1,0 +1,11 @@
+{
+    "required": true,
+    "minVersion": "0.8",
+    "package": "net.multyfora.compat.mixin",
+    "compatibilityLevel": "JAVA_21",
+    "mixins": [
+        "SawBlockEntityMixin"
+    ],
+    "client": [],
+    "server": []
+}

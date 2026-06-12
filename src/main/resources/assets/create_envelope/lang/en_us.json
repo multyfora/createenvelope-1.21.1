@@ -1,0 +1,13 @@
+{
+  "itemGroup.create_envelope": "Example Mod Tab",
+  "block.create_envelope.example_block": "Example Block",
+  "item.create_envelope.example_item": "Example Item",
+
+  "create_envelope.configuration.title": "Create: envelope compat Configs",
+  "create_envelope.configuration.section.create_envelope.common.toml": "Create: envelope compat Configs",
+  "create_envelope.configuration.section.create_envelope.common.toml.title": "Create: envelope compat Configs",
+  "create_envelope.configuration.items": "Item List",
+  "create_envelope.configuration.logDirtBlock": "Log Dirt Block",
+  "create_envelope.configuration.magicNumberIntroduction": "Magic Number Text",
+  "create_envelope.configuration.magicNumber": "Magic Number"
+}
