@@ -13,14 +13,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 @Mixin(SawBlockEntity.class)
 public class SawBlockEntityMixin {
 
-    private static final Logger LOGGER = LogUtils.getLogger();
+    private static final Logger LOGGER = LogUtils.getLogger(); //logs
 
     @Inject(method = "isSawable", at = @At("HEAD"), cancellable = true, remap = false)
     private static void onIsSawable(BlockState state, CallbackInfoReturnable<Boolean> cir) {
         Block block = state.getBlock();
-        LOGGER.info("Saw checking block: {}", block);
+        LOGGER.debug("//logs SawBlockEntity.isSawable: checking block {}", block); //logs
         if (block instanceof io.github.mortuusars.envelope.world.block.PackageBlock) {
-            LOGGER.info("Package block IS sawable!");
+            LOGGER.debug("//logs SawBlockEntity.isSawable: PackageBlock IS sawable!"); //logs
             cir.setReturnValue(true);
         }
     }

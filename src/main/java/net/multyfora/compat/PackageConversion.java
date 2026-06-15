@@ -1,5 +1,6 @@
 package net.multyfora.compat;
 
+import com.mojang.logging.LogUtils;
 import com.simibubi.create.AllDataComponents;
 import com.simibubi.create.content.logistics.box.PackageItem;
 import io.github.mortuusars.envelope.Envelope;
@@ -26,39 +27,64 @@ import net.minecraft.world.level.storage.loot.parameters.LootContextParamSets;
 import net.minecraft.world.level.storage.loot.parameters.LootContextParams;
 import net.minecraft.world.phys.Vec3;
 import net.neoforged.neoforge.server.ServerLifecycleHooks;
+import org.slf4j.Logger;
 
 import java.util.List;
 import java.util.Locale;
 
 public class PackageConversion {
 
+    private static final Logger LOGGER = LogUtils.getLogger(); //logs
+
     public static boolean isEnvelopePackage(ItemStack stack) {
-        return stack.has(Envelope.DataComponents.PACKAGE_CONTENTS);
+        boolean result = stack.has(Envelope.DataComponents.PACKAGE_CONTENTS);
+        LOGGER.debug("//logs isEnvelopePackage({}): {}", stack.getItem(), result); //logs
+        return result;
     }
 
     public static boolean isCreatePackage(ItemStack stack) {
-        return PackageItem.isPackage(stack);
+        boolean result = PackageItem.isPackage(stack);
+        LOGGER.debug("//logs isCreatePackage({}): {}", stack.getItem(), result); //logs
+        return result;
     }
 
     public static boolean isAnyPackage(ItemStack stack) {
-        return isEnvelopePackage(stack) || isCreatePackage(stack);
+        boolean result = isEnvelopePackage(stack) || isCreatePackage(stack);
+        LOGGER.debug("//logs isAnyPackage({}): {}", stack.getItem(), result); //logs
+        return result;
     }
 
     public static ItemStack toCreatePackage(ItemStack envelopePackage) {
-        if (isCreatePackage(envelopePackage))
+        LOGGER.debug("//logs toCreatePackage: input={}, hasPaybackSubj={}, isCreatePkg={}, isEnvPkg={}, hasLoot={}",
+            envelopePackage.getItem(),
+            envelopePackage.has(Envelope.DataComponents.PAYBACK_SUBJECT),
+            isCreatePackage(envelopePackage),
+            isEnvelopePackage(envelopePackage),
+            envelopePackage.has(DataComponents.CONTAINER_LOOT)); //logs
+
+        if (isCreatePackage(envelopePackage)) {
+            LOGGER.debug("//logs toCreatePackage: already Create package, returning as-is"); //logs
             return envelopePackage;
-        if (!isEnvelopePackage(envelopePackage) && !envelopePackage.has(DataComponents.CONTAINER_LOOT))
+        }
+        if (!isEnvelopePackage(envelopePackage) && !envelopePackage.has(DataComponents.CONTAINER_LOOT)) {
+            LOGGER.debug("//logs toCreatePackage: not an Envelope package and no loot, returning as-is"); //logs
             return envelopePackage;
-        if (envelopePackage.has(Envelope.DataComponents.PAYBACK_SUBJECT))
+        }
+        if (envelopePackage.has(Envelope.DataComponents.PAYBACK_SUBJECT)) {
+            LOGGER.debug("//logs toCreatePackage: has PAYBACK_SUBJECT, preserving as-is for Mail Service"); //logs
             return envelopePackage;
+        }
 
         ItemStack workingStack = envelopePackage.copy();
 
-        if (workingStack.has(DataComponents.CONTAINER_LOOT))
+        if (workingStack.has(DataComponents.CONTAINER_LOOT)) {
+            LOGGER.debug("//logs toCreatePackage: resolving loot table"); //logs
             resolveLootTable(workingStack);
+        }
 
         PackageContents contents = workingStack.get(Envelope.DataComponents.PACKAGE_CONTENTS);
         List<ItemStack> items = contents != null ? contents.copyItems() : List.of();
+        LOGGER.debug("//logs toCreatePackage: extracted {} items from package", items.size()); //logs
 
         ItemStack createPackage = PackageItem.containing(items);
 
@@ -74,29 +100,40 @@ public class PackageConversion {
         if (workingStack.has(Envelope.DataComponents.MAIL_RECIPIENT)) {
             var address = workingStack.get(Envelope.DataComponents.MAIL_RECIPIENT);
             PackageItem.addAddress(createPackage, address.getString());
+            LOGGER.debug("//logs toCreatePackage: set Create address to {}", address.getString()); //logs
         }
 
+        LOGGER.debug("//logs toCreatePackage: returning Create package"); //logs
         return createPackage;
     }
 
     public static void syncAddresses(ItemStack stack, Level level) {
-        if (!PackageItem.isPackage(stack)) return;
+        if (!PackageItem.isPackage(stack)) {
+            LOGGER.debug("//logs syncAddresses: not a Create package, skipping"); //logs
+            return;
+        }
 
         boolean hasCreateAddr = stack.has(AllDataComponents.PACKAGE_ADDRESS)
             && !stack.getOrDefault(AllDataComponents.PACKAGE_ADDRESS, "").isEmpty();
         boolean hasEnvAddr = stack.has(Envelope.DataComponents.MAIL_RECIPIENT);
 
+        LOGGER.debug("//logs syncAddresses: hasCreateAddr={}, hasEnvAddr={}", hasCreateAddr, hasEnvAddr); //logs
+
         if (hasCreateAddr && !hasEnvAddr) {
             String addr = stack.get(AllDataComponents.PACKAGE_ADDRESS);
+            LOGGER.debug("//logs syncAddresses: resolving Create address '{}' to Envelope address", addr); //logs
             Address resolved = resolveAddress(addr, level);
+            LOGGER.debug("//logs syncAddresses: resolved to {}", resolved.getString()); //logs
             stack.set(Envelope.DataComponents.MAIL_RECIPIENT, resolved);
         } else if (hasEnvAddr && !hasCreateAddr) {
             var addr = stack.get(Envelope.DataComponents.MAIL_RECIPIENT);
+            LOGGER.debug("//logs syncAddresses: syncing Envelope address '{}' back to Create", addr.getString()); //logs
             PackageItem.addAddress(stack, addr.getString());
         }
     }
 
     private static Address resolveAddress(String addr, Level level) {
+        LOGGER.debug("//logs resolveAddress: resolving '{}'", addr); //logs
         String[] parts = addr.split(",");
         if (parts.length == 3 && level != null) {
             try {
@@ -105,20 +142,29 @@ public class PackageConversion {
                 int z = Integer.parseInt(parts[2].trim());
                 BlockPos pos = new BlockPos(x, y, z);
                 if (level.getBlockEntity(pos) instanceof MailboxBlockEntity mailbox
-                    && mailbox.getAddress() != null)
+                    && mailbox.getAddress() != null) {
+                    LOGGER.debug("//logs resolveAddress: found mailbox at {},{}", pos.toShortString(), mailbox.getAddress().getString()); //logs
                     return mailbox.getAddress();
-            } catch (NumberFormatException ignored) {}
+                }
+            } catch (NumberFormatException ignored) {
+                LOGGER.debug("//logs resolveAddress: not a position string"); //logs
+            }
         }
 
         if (level instanceof ServerLevel serverLevel) {
             ServiceAddress service = resolveService(serverLevel, addr);
-            if (service != null) return service;
+            if (service != null) {
+                LOGGER.debug("//logs resolveAddress: resolved as service address"); //logs
+                return service;
+            }
         }
 
+        LOGGER.debug("//logs resolveAddress: falling back to CustomAddress"); //logs
         return new CustomAddress(Component.literal(addr));
     }
 
     private static ServiceAddress resolveService(ServerLevel level, String name) {
+        LOGGER.debug("//logs resolveService: looking up service '{}'", name); //logs
         RegistryAccess registries = level.registryAccess();
         String normalised = name.toLowerCase(Locale.ROOT).replace(" ", "_");
 
@@ -126,25 +172,34 @@ public class PackageConversion {
         ResourceKey<ServiceAddressDefinition> key =
             ResourceKey.create(Envelope.Registries.SERVICE_ADDRESS_DEFINITION, loc);
         var result = ServiceAddress.get(registries, key);
-        if (result.isPresent())
+        if (result.isPresent()) {
+            LOGGER.debug("//logs resolveService: found by direct key lookup: {}", normalised); //logs
             return result.get();
+        }
 
         var registry = registries.registryOrThrow(Envelope.Registries.SERVICE_ADDRESS_DEFINITION);
         for (var entry : registry.entrySet()) {
             ResourceLocation entryId = entry.getKey().location();
-            if (entryId.getPath().equals(normalised))
+            if (entryId.getPath().equals(normalised)) {
+                LOGGER.debug("//logs resolveService: found by path match: {}", entryId); //logs
                 return new ServiceAddress(registry.getHolderOrThrow(entry.getKey()));
+            }
         }
 
         for (var entry : registry.entrySet()) {
             String defName = entry.getValue().name().getString();
-            if (defName.equalsIgnoreCase(name))
+            if (defName.equalsIgnoreCase(name)) {
+                LOGGER.debug("//logs resolveService: found by display name match: {}", defName); //logs
                 return new ServiceAddress(registry.getHolderOrThrow(entry.getKey()));
+            }
             String defKey = defName.toLowerCase(Locale.ROOT).replace(" ", "_");
-            if (defKey.equals(normalised))
+            if (defKey.equals(normalised)) {
+                LOGGER.debug("//logs resolveService: found by normalised display name match: {}", defKey); //logs
                 return new ServiceAddress(registry.getHolderOrThrow(entry.getKey()));
+            }
         }
 
+        LOGGER.debug("//logs resolveService: no match found for '{}'", name); //logs
         return null;
     }
 

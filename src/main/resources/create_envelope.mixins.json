@@ -9,6 +9,8 @@
         "MailboxMenuMixin",
         "PackagerBlockEntityMixin",
         "PackingMenuMixin",
+        "PaybackTagApplicationRecipeMixin",
+        "PaybackTagItemMixin",
         "SawBlockEntityMixin"
     ],
     "client": [],
