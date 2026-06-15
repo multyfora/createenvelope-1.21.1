@@ -49,6 +49,8 @@ public class PackageConversion {
             return envelopePackage;
         if (!isEnvelopePackage(envelopePackage) && !envelopePackage.has(DataComponents.CONTAINER_LOOT))
             return envelopePackage;
+        if (envelopePackage.has(Envelope.DataComponents.PAYBACK_SUBJECT))
+            return envelopePackage;
 
         ItemStack workingStack = envelopePackage.copy();
 
@@ -65,6 +67,7 @@ public class PackageConversion {
         copyEnvelopeComponent(workingStack, createPackage, Envelope.DataComponents.MAIL_ID);
         copyEnvelopeComponent(workingStack, createPackage, Envelope.DataComponents.MAIL_DELIVERY_LOG);
         copyEnvelopeComponent(workingStack, createPackage, Envelope.DataComponents.MAIL_PAYBACK_REQUEST);
+        copyEnvelopeComponent(workingStack, createPackage, Envelope.DataComponents.PAYBACK_SUBJECT);
         copyEnvelopeComponent(workingStack, createPackage, Envelope.DataComponents.PACKAGE_CONTENTS);
         copyEnvelopeComponent(workingStack, createPackage, Envelope.DataComponents.PACKAGE_EXPERIENCE);
 
