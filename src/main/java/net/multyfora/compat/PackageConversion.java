@@ -5,7 +5,9 @@ import com.simibubi.create.content.logistics.box.PackageItem;
 import io.github.mortuusars.envelope.Envelope;
 import io.github.mortuusars.envelope.world.block.mailbox.MailboxBlockEntity;
 import io.github.mortuusars.envelope.world.item.component.PackageContents;
+import io.github.mortuusars.envelope.world.mail.MailService;
 import io.github.mortuusars.envelope.world.mail.address.Address;
+import io.github.mortuusars.envelope.world.mail.address.type.BlockAddress;
 import io.github.mortuusars.envelope.world.mail.address.type.CustomAddress;
 import io.github.mortuusars.envelope.world.mail.address.type.ServiceAddress;
 import io.github.mortuusars.envelope.world.mail.service.ServiceAddressDefinition;
@@ -29,6 +31,7 @@ import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.List;
 import java.util.Locale;
+import java.util.Optional;
 
 public class PackageConversion {
 
@@ -108,11 +111,11 @@ public class PackageConversion {
         }
 
         if (level instanceof ServerLevel serverLevel) {
-            ServiceAddress service = resolveService(serverLevel, addr);
-            if (service != null) return service;
+            Optional<Address> found = MailService.of(serverLevel).getKnownAddresses().byName(addr);
+            if (found.isPresent()) return found.get();
         }
 
-        return new CustomAddress(Component.literal(addr));
+        return new BlockAddress(addr);
     }
 
     private static ServiceAddress resolveService(ServerLevel level, String name) {
