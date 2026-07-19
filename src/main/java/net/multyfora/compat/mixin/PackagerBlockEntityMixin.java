@@ -1,8 +1,10 @@
 package net.multyfora.compat.mixin;
 
+import com.llamalad7.mixinextras.sugar.Local;
 import com.simibubi.create.content.logistics.box.PackageItem;
 import com.simibubi.create.content.logistics.packager.PackagerBlock;
 import com.simibubi.create.content.logistics.packager.PackagerBlockEntity;
+import com.simibubi.create.content.logistics.packager.PackagingRequest;
 import io.github.mortuusars.envelope.Envelope;
 import io.github.mortuusars.envelope.world.block.mailbox.MailboxBlockEntity;
 import io.github.mortuusars.envelope.world.item.component.Id;
@@ -21,8 +23,21 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
+import java.util.List;
+
 @Mixin(PackagerBlockEntity.class)
 public class PackagerBlockEntityMixin {
+
+    @Inject(method = "attemptToSend", at = @At(value = "INVOKE", target = "Lcom/simibubi/create/content/logistics/packager/PackagerBlockEntity;getLinkPos()Lnet/minecraft/core/BlockPos;", shift = At.Shift.BEFORE), remap = false)
+    private void afterAddressSet(List<PackagingRequest> queuedRequests, CallbackInfo ci, @Local(name = "createdBox") ItemStack createdBox) {
+        PackagerBlockEntity self = (PackagerBlockEntity) (Object) this;
+        Level level = self.getLevel();
+        if (level != null && !level.isClientSide()) {
+            if (!PackageConversion.isEnvelopePackage(createdBox)) {
+                PackageConversion.syncAddresses(createdBox, level);
+            }
+        }
+    }
 
     @Inject(method = "unwrapBox", at = @At("HEAD"), cancellable = true, remap = false)
     private void onUnwrapBox(ItemStack box, boolean simulate, CallbackInfoReturnable<Boolean> cir) {
